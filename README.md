@@ -6,9 +6,28 @@ A systematic prompt injection testing framework for LLM-integrated applications.
 
 ## Why This Exists
 
-Most LLM security testing is ad-hoc — manual prompt crafting with no systematic coverage, no mutation logic, and no structured reporting. This tool brings the same rigor that traditional web app fuzzers bring to injection testing: comprehensive payload libraries, intelligent mutation, configurable targets, and actionable output.
+Most LLM security testing is ad-hoc: manual prompt crafting with no systematic coverage, no mutation logic, and no structured reporting. This tool brings the same rigor that traditional web app fuzzers bring to injection testing: comprehensive payload libraries, intelligent mutation, configurable targets, and actionable output.
 
-Built from real-world adversarial assessment experience against production LLM applications.
+## How It Works on an Engagement
+
+This tool is designed for authenticated testing. The typical workflow:
+
+1. **Get access.** You're on the internal network with a regular user account, or you have access to the target LLM application through its normal interface.
+2. **Identify the endpoint.** Find the API the application's frontend talks to. Open browser dev tools (Network tab), interact with the chatbot or AI feature, and grab the endpoint URL and your bearer token from the request headers.
+3. **Point the fuzzer at it.** Configure the target with the endpoint, your auth token, and the body format the API expects. The `{payload}` placeholder is where injection payloads get inserted.
+4. **Run the scan.** The fuzzer sends payloads through the same authenticated channel a normal user would use, then analyzes responses for signs of injection success (system prompt leakage, safety bypass, instruction override).
+
+```bash
+# Example: testing a custom internal chatbot
+pif scan --target custom \
+  --endpoint https://internal-chatbot.corp.com/api/chat \
+  --body-template '{"message": "{payload}", "session_id": "test-123"}' \
+  --header "Authorization: Bearer eyJhbG..."
+```
+
+The tool starts with 29 base payloads across 7 attack categories. The mutation engine is where it scales: one round with 3 mutation strategies (encoding, token splitting, homoglyphs) expands to ~258 requests. Three rounds produces ~15,000 variants. Each round mutates the previous round's output, so coverage compounds. In practice, 1-2 rounds is sufficient for most assessments; use 3 when you're trying to get through a specific filter.
+
+Both tools also support custom payload files (YAML), so you can add payloads tailored to the specific application: organization-specific terminology, known document types, tool names discovered during recon.
 
 ## Features
 
